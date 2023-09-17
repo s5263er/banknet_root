@@ -1,0 +1,21 @@
+/* RegisterPage.css */
+
+.register-page {
+    background-color: #111; /* Deep black background */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+  
+  .login-container {
+    background-color: #333; /* Dark gray container */
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    text-align: center;
+    width: 300px;
+  }
+  
+  /* Rest of your styles... */
+  

@@ -1,0 +1,73 @@
+/* HomePage.css */
+
+.home-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start; /* Start from the top */
+    height: 100vh;
+    background-image: linear-gradient(135deg, #000, #111); /* Background gradient */
+    color: #fff; /* White text */
+    font-family: 'Montserrat', sans-serif; /* Futuristic font */
+  }
+  
+  .app-bar {
+    width: 100%;
+    padding: 20px 0;
+    text-align: center;
+  }
+  
+  .app-title {
+    font-size: 24px;
+    font-weight: bold;
+  }
+  
+  .balance-widget {
+    margin-top: 40px;
+    background-color: #333; /* Dark gray background */
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .balance-widget h2 {
+    font-size: 36px;
+    margin-bottom: 10px;
+  }
+  
+  .squares-container {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 20px;
+  }
+  
+  .square {
+    width: 200px;
+    height: 200px;
+    background-color: #fff; /* White background */
+    color: #000; /* Black text */
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s, background-color 0.3s;
+  }
+  
+  .square:hover {
+    transform: translateY(-5px);
+    background-color: #000; /* Black background on hover */
+    color: #fff; /* White text on hover */
+  }
+  
+  .square img {
+    width: 60px; /* Adjust logo size */
+    height: 60px;
+    margin-bottom: 10px;
+  }
+  

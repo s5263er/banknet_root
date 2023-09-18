@@ -49,3 +49,8 @@
 /Users/erdem/Desktop/banknet/banknet_root/obj/Debug/net7.0/ref/banknet.dll
 /Users/erdem/Desktop/banknet/banknet_root/bin/Debug/net7.0/bankfront/build/asset-manifest.json
 /Users/erdem/Desktop/banknet/banknet_root/bin/Debug/net7.0/bankfront/build/manifest.json
+/Users/erdem/Desktop/banknet/banknet_root/bin/Debug/net7.0/build/asset-manifest.json
+/Users/erdem/Desktop/banknet/banknet_root/bin/Debug/net7.0/build/manifest.json
+/Users/erdem/Desktop/banknet/banknet_root/bin/Debug/net7.0/package-lock.json
+/Users/erdem/Desktop/banknet/banknet_root/bin/Debug/net7.0/package.json
+/Users/erdem/Desktop/banknet/banknet_root/bin/Debug/net7.0/public/manifest.json

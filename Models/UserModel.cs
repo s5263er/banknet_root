@@ -8,11 +8,39 @@ namespace BankingApp.Models
         public string Name { get; set; }
 
         public string Password { get; set; }
-        public decimal Balance { get; set; } = 0;
+        public float Balance { get; set; } = 0;
         public string IBAN { get; set; } = "";
         public string Role { get; set; } = "Client";
         
     }
+    
+    public class UserStock
+    {
+        public int Id { get; set; }  
+        public int UserId { get; set; }  // Foreign key referencing the User who owns the stock
+        public string StockSymbol { get; set; }  
+        public int Quantity { get; set; } 
+        public DateTime PurchaseDate { get; set; }  
+
+        public int PurchasePrice { get; set; }
+
+        public string BuySell {get; set;}
+    }
+    public class BuyStockRequest
+    {
+        public string Symbol { get; set; }
+        public int Quantity { get; set; }
+        public float PurchasePrice { get; set; }
+    }
+    public class SellStockRequest
+    {
+        public string Symbol { get; set; }
+        public int Quantity { get; set; }
+        public float SellPrice { get; set; }
+    }
+
+
+
     public class JwtConfig
     {
         public string Issuer { get; set; }
@@ -44,9 +72,5 @@ namespace BankingApp.Models
         {
             public List<double?> Close { get; set; }
         }
-
-
-
-
 
 }

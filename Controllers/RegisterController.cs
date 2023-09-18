@@ -13,6 +13,7 @@ using BankingApp.Data;
 using BankingApp.Models;
 using Newtonsoft.Json;
 
+
 namespace BankingApp.Controllers
 {
     [Route("api")]
@@ -50,7 +51,7 @@ namespace BankingApp.Controllers
                 return NotFound("User not found");
             }
 
-            decimal userBalance = user.Balance;
+            float userBalance = user.Balance;
             Console.WriteLine("Balance Successful");
 
             return Ok(new { balance = userBalance });
@@ -192,6 +193,127 @@ namespace BankingApp.Controllers
                 return StatusCode(500, $"Error: {ex.Message}");
             }
         }
+        [HttpPost("buy-stock")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public IActionResult BuyStock([FromBody] BuyStockRequest buyRequest)
+        {
+            var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+            var UserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            Console.WriteLine(UserId);
+            Console.WriteLine(userEmail);
+
+
+
+            if (string.IsNullOrEmpty(userEmail))
+            {
+                return Unauthorized("User email not found in the token.");
+            }
+
+            var user = _dbContext.Users.SingleOrDefault(u => u.Email == userEmail);
+
+            if (user == null)
+            {
+                return NotFound("User not found");
+            }
+
+            float totalCost = buyRequest.PurchasePrice;
+
+            if (user.Balance < totalCost)
+            {
+                return BadRequest("Insufficient balance to make the purchase.");
+            }
+
+            user.Balance -= totalCost;
+
+            var userStock = new UserStock
+            {
+                UserId = user.UserId,
+                StockSymbol = buyRequest.Symbol,
+                Quantity = buyRequest.Quantity,
+                PurchasePrice = (int)buyRequest.PurchasePrice,
+                PurchaseDate = DateTime.UtcNow, 
+                BuySell = "Buy"
+            };
+
+            _dbContext.UserStock.Add(userStock); 
+            _dbContext.SaveChanges();
+
+            return Ok("Stock purchase successful!");
+        }
+
+[HttpPost("sell-stock")]
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+public IActionResult SellStock([FromBody] SellStockRequest sellRequest)
+{
+    var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+
+    if (string.IsNullOrEmpty(userEmail))
+    {
+        return Unauthorized("User email not found in the token.");
+    }
+
+    var user = _dbContext.Users.SingleOrDefault(u => u.Email == userEmail);
+
+    if (user == null)
+    {
+        return NotFound("User not found");
+    }
+
+    var userStocks = _dbContext.UserStock
+        .Where(us => us.UserId == user.UserId && us.StockSymbol == sellRequest.Symbol)
+        .OrderBy(us => us.PurchaseDate)
+        .ToList();
+
+    if (userStocks == null)
+    {
+        return BadRequest("User does not own any stocks of this symbol.");
+    }
+    Console.WriteLine("Sell Request Received: " + JsonConvert.SerializeObject(sellRequest));
+
+    Console.WriteLine("Sell Price Received" + sellRequest.SellPrice);
+    Console.WriteLine("Quantity Received" + sellRequest.Quantity);
+    Console.WriteLine("Symbol Received" + sellRequest.Symbol);
+
+    int totalBoughtQuantity = userStocks
+        .Where(us => us.BuySell == "Buy")
+        .Sum(us => us.Quantity);
+
+    int totalSoldQuantity = userStocks
+        .Where(us => us.BuySell == "Sell")
+        .Sum(us => us.Quantity);
+
+    if (totalBoughtQuantity >= totalSoldQuantity + sellRequest.Quantity)
+    {
+        float totalAmountReceived = sellRequest.SellPrice; // Calculate total amount received
+
+        // Create a record for the stock sale
+        var stockSale = new UserStock
+        {
+            UserId = user.UserId,
+            StockSymbol = sellRequest.Symbol,
+            Quantity = sellRequest.Quantity,
+            PurchaseDate = DateTime.UtcNow,
+            PurchasePrice = (int)sellRequest.SellPrice,
+            BuySell = "Sell"
+        };
+
+        _dbContext.UserStock.Add(stockSale);
+
+        // Update the user's balance with the received amount
+        user.Balance += totalAmountReceived;
+
+        _dbContext.SaveChanges();
+
+        return Ok("Stock sell successful!");
+    }
+    else
+    {
+        // Insufficient quantity to sell
+        return BadRequest("Insufficient quantity of stocks to sell.");
+    }
+}
+
+
 
 
 

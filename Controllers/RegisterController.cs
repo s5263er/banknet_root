@@ -12,7 +12,8 @@ using System.Threading.Tasks;
 using BankingApp.Data;
 using BankingApp.Models;
 using Newtonsoft.Json;
-
+using Microsoft.EntityFrameworkCore.Migrations.Operations;
+using Microsoft.EntityFrameworkCore;
 
 namespace BankingApp.Controllers
 {
@@ -55,6 +56,97 @@ namespace BankingApp.Controllers
             Console.WriteLine("Balance Successful");
 
             return Ok(new { balance = userBalance });
+        }
+
+        [HttpPost("deposit")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> DepositAsync(DepositRequest request)
+        {
+            float amount; 
+        using (StreamReader reader = new StreamReader(HttpContext.Request.Body, Encoding.UTF8))
+        {
+            string requestBody = await reader.ReadToEndAsync();
+            Console.WriteLine("Request Content: " + requestBody);
+            Console.WriteLine("RequestBody" + requestBody[0]);
+            var depositRequest = JsonConvert.DeserializeObject<DepositRequest>(requestBody);
+            amount = depositRequest.Amount;
+            Console.WriteLine("AMOUNT: " + amount);
+        }
+            
+            Console.WriteLine("Deposit action accessed.");
+
+            Console.WriteLine("AMOUNT: " + amount);
+
+            var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+
+            if (string.IsNullOrEmpty(userEmail))
+            {
+                return Unauthorized("User not found in the token.");
+            }
+
+            var user = _dbContext.Users.SingleOrDefault(u => u.Email == userEmail);
+
+            if (user == null)
+            {
+                return NotFound("User not found");
+            }
+            var transaction = new Transaction
+            {
+                UserId = user.UserId,
+                Amount = amount,
+                Type = "Deposit",
+                Time = DateTime.UtcNow
+            };
+            _dbContext.Transactions.Add(transaction);
+            user.Balance += amount;
+            _dbContext.SaveChanges();
+            Console.WriteLine("Deposit Successful");
+            return Ok();
+        }
+        [HttpPost("withdraw")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> WithdrawAsync(WithdrawRequest request)
+        {
+            float amount; 
+        using (StreamReader reader = new StreamReader(HttpContext.Request.Body, Encoding.UTF8))
+        {
+            string requestBody = await reader.ReadToEndAsync();
+            var withdrawRequest = JsonConvert.DeserializeObject<DepositRequest>(requestBody);
+            amount = withdrawRequest.Amount;
+        }
+            
+
+            var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+
+            if (string.IsNullOrEmpty(userEmail))
+            {
+                return Unauthorized("User not found in the token.");
+            }
+
+            var user = _dbContext.Users.SingleOrDefault(u => u.Email == userEmail);
+
+            if (user == null)
+            {
+                return NotFound("User not found");
+            }
+            if(user.Balance < amount)
+            {
+                return BadRequest("Insufficient balance.");
+            }
+            var transaction = new Transaction
+            {
+                UserId = user.UserId,
+                Amount = amount,
+                Type = "Withdraw",
+                Time = DateTime.UtcNow
+            };
+            _dbContext.Transactions.Add(transaction);
+            user.Balance = user.Balance - amount;
+            Console.WriteLine(user.Balance);
+            Console.WriteLine(amount);
+            _dbContext.SaveChanges();
+            Console.WriteLine("Withdraw Successful");
+            return Ok();
         }
 
 
@@ -312,6 +404,71 @@ public IActionResult SellStock([FromBody] SellStockRequest sellRequest)
         return BadRequest("Insufficient quantity of stocks to sell.");
     }
 }
+        [HttpPost("transfer")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> Transfer(TransferRequest request)
+        {
+            float amount; 
+            string toIBAN;
+            string toname;
+        using (StreamReader reader = new StreamReader(HttpContext.Request.Body, Encoding.UTF8))
+        {
+            string requestBody = await reader.ReadToEndAsync();
+            var transferRequest = JsonConvert.DeserializeObject<TransferRequest>(requestBody);
+            amount = transferRequest.Amount;
+            toIBAN = transferRequest.IBAN;
+            toname = transferRequest.Name;
+
+            Console.WriteLine("name" + toname);
+            Console.WriteLine("IBAN" + toIBAN);
+            Console.WriteLine("Amount" + amount);
+        }
+            var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+            Console.WriteLine(userEmail);
+
+            if (string.IsNullOrEmpty(userEmail))
+            {
+                return Unauthorized("User not found in the token.");
+            }
+
+            var sender_user = _dbContext.Users.SingleOrDefault(u => u.Email == userEmail);
+            Console.WriteLine(sender_user.UserId);
+
+            if (sender_user == null)
+            {
+                return NotFound("User not found");
+            }
+
+            if (sender_user.Balance < amount)
+            {
+                return BadRequest("Insufficient balance for the transfer.");
+            }
+            var receiver_user = await _dbContext.Users.SingleOrDefaultAsync(u => u.IBAN == toIBAN && u.Name == toname);
+
+            if (receiver_user == null)
+            {
+                return NotFound("User not found with the given IBAN and Name combination");
+            }
+
+            sender_user.Balance -= amount;
+
+            _dbContext.Users.Update(sender_user);
+
+            var transfer = new Transfer
+            {
+                FromUserId = sender_user.UserId,
+                ToUserId = receiver_user.UserId,
+                Amount = amount,
+                Date = DateTime.UtcNow
+            };
+            receiver_user.Balance += amount;
+            _dbContext.Users.Update(receiver_user);
+
+            await _dbContext.Transfer.AddAsync(transfer);
+            await _dbContext.SaveChangesAsync();
+            
+            return Ok("Transfer successful.");
+        }
 
 
 

@@ -54,3 +54,4 @@
 /Users/erdem/Desktop/banknet/banknet_root/bin/Debug/net7.0/package-lock.json
 /Users/erdem/Desktop/banknet/banknet_root/bin/Debug/net7.0/package.json
 /Users/erdem/Desktop/banknet/banknet_root/bin/Debug/net7.0/public/manifest.json
+/Users/erdem/Desktop/banknet/banknet_root/bin/Debug/net7.0/bankfront/src/components/stocksDirectory.json

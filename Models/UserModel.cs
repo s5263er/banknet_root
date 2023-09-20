@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace BankingApp.Models
 {
     public class User
@@ -72,5 +74,43 @@ namespace BankingApp.Models
         {
             public List<double?> Close { get; set; }
         }
+
+        public class Transaction
+        {
+            public int Id { get; set; }
+            
+            public int UserId { get; set; }
+            
+            public float Amount { get; set; }
+            
+            public string Type { get; set; }
+            
+            public DateTime Time { get; set; }
+            
+        }
+        public class DepositRequest
+        {
+            public float Amount { get; set; }
+        }
+        public class WithdrawRequest
+        {
+            public float Amount { get; set; }
+        }
+        public class TransferRequest
+        {
+            public string IBAN {get; set;}
+            public string Name {get; set;}
+            public float Amount {get; set;}
+        }
+
+        public class Transfer
+        {
+            public int Id { get; set; }
+            public int FromUserId { get; set; }
+            public int ToUserId { get; set; }
+            public float Amount { get; set; }
+            public DateTime Date {get; set;}
+        }
+
 
 }

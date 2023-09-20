@@ -11,6 +11,10 @@ namespace BankingApp.Data
         }
         public DbSet<BankingApp.Models.User> Users { get; set; }
         public DbSet<BankingApp.Models.UserStock> UserStock { get; set; }
+        public DbSet<BankingApp.Models.Transaction> Transactions { get; set; }
+
+        public DbSet<BankingApp.Models.Transfer> Transfer { get; set; }
+
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

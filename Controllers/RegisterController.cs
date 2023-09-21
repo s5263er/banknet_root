@@ -14,6 +14,7 @@ using BankingApp.Models;
 using Newtonsoft.Json;
 using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection.Metadata;
 
 namespace BankingApp.Controllers
 {
@@ -469,6 +470,77 @@ public IActionResult SellStock([FromBody] SellStockRequest sellRequest)
             
             return Ok("Transfer successful.");
         }
+        [HttpGet("transferhistory")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> TransferHistory()
+        {
+            // Retrieve the currently authenticated user's ID from the JWT token
+            var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+            var user = _dbContext.Users.SingleOrDefault(u => u.Email == userEmail);
+            int userId;
+            if (user == null)
+            {
+                return NotFound("User not found");
+            }
+            else
+            {
+                userId = user.UserId;
+            }
+
+            // Use the userId to query the database and retrieve the user's transfer history
+            // Join the Transfer and Users tables to get user names
+            var userTransfers = _dbContext.Transfer
+                .Where(t => t.FromUserId == userId || t.ToUserId == userId)
+                .Select(t => new
+                {
+                    t.Id,
+                    FromUserName = GetUserDisplayName(_dbContext.Users.SingleOrDefault(u => u.UserId == t.FromUserId)),
+                    ToUserName = GetUserDisplayName(_dbContext.Users.SingleOrDefault(u => u.UserId == t.ToUserId)),
+                    t.Amount,
+                    t.Date
+                })
+                .ToList();
+
+            Console.WriteLine($"Total Transfers Retrieved: {userTransfers.Count}");
+
+            // Filter out duplicates in memory
+            var distinctUserTransfers = userTransfers
+                .GroupBy(u => u.Id)
+                .Select(group => group.First())
+                .ToList();
+
+            Console.WriteLine($"Distinct Transfers Count: {distinctUserTransfers.Count}");
+
+            // Create a DTO to include user names
+            foreach (var transfering in distinctUserTransfers)
+            {
+                // Generate a unique identifier based on the transfer data
+                var uniqueIdentifier = $"{transfering.Id}_{transfering.FromUserName}_{transfering.ToUserName}_{transfering.Amount}_{transfering.Date}";
+
+                Console.WriteLine($"Unique Identifier: {uniqueIdentifier}, Transfer ID: {transfering.Id}");
+            }
+
+            var transferDTOs = userTransfers.Select(transfer => new
+            {
+                Id = transfer.Id,
+                FromUserName = transfer.FromUserName,
+                ToUserName = transfer.ToUserName,
+                Amount = transfer.Amount,
+                Date = transfer.Date
+            });
+
+            return Ok(transferDTOs);
+        }
+        private static string GetUserDisplayName(User user)
+        {
+            return user != null ? user.Name : string.Empty;
+        }
+
+
+
+
+
+
 
 
 

@@ -21,7 +21,7 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-bin/Debug/net7.0/Microsoft.IdentityModel.JsonWebTokens.dll
+bin/Debug/net7.0/Microsodft.IdentityModel.JsonWebTokens.dll
 bin/Debug/net7.0/Microsoft.EntityFrameworkCore.dll
 bin/Debug/net7.0/Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
 *.dll

@@ -59,7 +59,7 @@ namespace BankingApp
                 options.AddDefaultPolicy(builder =>
                 {
                     builder
-                        .WithOrigins("http://localhost:3000")
+                        .WithOrigins("http://localhost:3000","http://192.168.1.4:3000")
                         .AllowAnyHeader()
                         .AllowAnyMethod();
                 });
@@ -68,7 +68,7 @@ namespace BankingApp
 {       
             options.AddPolicy("ReactAppPolicy", builder =>
             {
-                builder.WithOrigins("http://localhost:3000") 
+                builder.WithOrigins("http://localhost:3000","http://192.168.1.4:3000") 
                     .AllowAnyHeader()
                     .AllowAnyMethod();
             });

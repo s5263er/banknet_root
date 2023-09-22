@@ -15,6 +15,7 @@ using Newtonsoft.Json;
 using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection.Metadata;
+using Microsoft.AspNetCore.Http.Features;
 
 namespace BankingApp.Controllers
 {
@@ -152,16 +153,15 @@ namespace BankingApp.Controllers
 
 
 
-        // Registration Endpoint
         [HttpPost("register")]
         public IActionResult Register([FromBody] User model)
         {
+            Console.WriteLine("Register Accessed");
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            // Create and save the new user
             var newUser = new User
             {
                 Email = model.Email,
@@ -175,7 +175,6 @@ namespace BankingApp.Controllers
             return Ok("Registration successful!");
         }
 
-        // Login Endpoint
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] User model)
         {
@@ -323,7 +322,7 @@ namespace BankingApp.Controllers
                 UserId = user.UserId,
                 StockSymbol = buyRequest.Symbol,
                 Quantity = buyRequest.Quantity,
-                PurchasePrice = (int)buyRequest.PurchasePrice,
+                PurchasePrice = buyRequest.PurchasePrice,
                 PurchaseDate = DateTime.UtcNow, 
                 BuySell = "Buy"
             };
@@ -334,77 +333,77 @@ namespace BankingApp.Controllers
             return Ok("Stock purchase successful!");
         }
 
-[HttpPost("sell-stock")]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-public IActionResult SellStock([FromBody] SellStockRequest sellRequest)
-{
-    var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
-
-    if (string.IsNullOrEmpty(userEmail))
-    {
-        return Unauthorized("User email not found in the token.");
-    }
-
-    var user = _dbContext.Users.SingleOrDefault(u => u.Email == userEmail);
-
-    if (user == null)
-    {
-        return NotFound("User not found");
-    }
-
-    var userStocks = _dbContext.UserStock
-        .Where(us => us.UserId == user.UserId && us.StockSymbol == sellRequest.Symbol)
-        .OrderBy(us => us.PurchaseDate)
-        .ToList();
-
-    if (userStocks == null)
-    {
-        return BadRequest("User does not own any stocks of this symbol.");
-    }
-    Console.WriteLine("Sell Request Received: " + JsonConvert.SerializeObject(sellRequest));
-
-    Console.WriteLine("Sell Price Received" + sellRequest.SellPrice);
-    Console.WriteLine("Quantity Received" + sellRequest.Quantity);
-    Console.WriteLine("Symbol Received" + sellRequest.Symbol);
-
-    int totalBoughtQuantity = userStocks
-        .Where(us => us.BuySell == "Buy")
-        .Sum(us => us.Quantity);
-
-    int totalSoldQuantity = userStocks
-        .Where(us => us.BuySell == "Sell")
-        .Sum(us => us.Quantity);
-
-    if (totalBoughtQuantity >= totalSoldQuantity + sellRequest.Quantity)
-    {
-        float totalAmountReceived = sellRequest.SellPrice; // Calculate total amount received
-
-        // Create a record for the stock sale
-        var stockSale = new UserStock
+        [HttpPost("sell-stock")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public IActionResult SellStock([FromBody] SellStockRequest sellRequest)
         {
-            UserId = user.UserId,
-            StockSymbol = sellRequest.Symbol,
-            Quantity = sellRequest.Quantity,
-            PurchaseDate = DateTime.UtcNow,
-            PurchasePrice = (int)sellRequest.SellPrice,
-            BuySell = "Sell"
-        };
+            var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
 
-        _dbContext.UserStock.Add(stockSale);
+            if (string.IsNullOrEmpty(userEmail))
+            {
+                return Unauthorized("User email not found in the token.");
+            }
 
-        // Update the user's balance with the received amount
-        user.Balance += totalAmountReceived;
+            var user = _dbContext.Users.SingleOrDefault(u => u.Email == userEmail);
 
-        _dbContext.SaveChanges();
+            if (user == null)
+            {
+                return NotFound("User not found");
+            }
 
-        return Ok("Stock sell successful!");
-    }
-    else
-    {
-        // Insufficient quantity to sell
-        return BadRequest("Insufficient quantity of stocks to sell.");
-    }
-}
+            var userStocks = _dbContext.UserStock
+                .Where(us => us.UserId == user.UserId && us.StockSymbol == sellRequest.Symbol)
+                .OrderBy(us => us.PurchaseDate)
+                .ToList();
+
+            if (userStocks == null)
+            {
+                return BadRequest("User does not own any stocks of this symbol.");
+            }
+            Console.WriteLine("Sell Request Received: " + JsonConvert.SerializeObject(sellRequest));
+
+            Console.WriteLine("Sell Price Received" + sellRequest.SellPrice);
+            Console.WriteLine("Quantity Received" + sellRequest.Quantity);
+            Console.WriteLine("Symbol Received" + sellRequest.Symbol);
+
+            int totalBoughtQuantity = userStocks
+                .Where(us => us.BuySell == "Buy")
+                .Sum(us => us.Quantity);
+
+            int totalSoldQuantity = userStocks
+                .Where(us => us.BuySell == "Sell")
+                .Sum(us => us.Quantity);
+
+            if (totalBoughtQuantity >= totalSoldQuantity + sellRequest.Quantity)
+            {
+                float totalAmountReceived = sellRequest.SellPrice; // Calculate total amount received
+
+                // Create a record for the stock sale
+                var stockSale = new UserStock
+                {
+                    UserId = user.UserId,
+                    StockSymbol = sellRequest.Symbol,
+                    Quantity = sellRequest.Quantity,
+                    PurchaseDate = DateTime.UtcNow,
+                    PurchasePrice = sellRequest.SellPrice,
+                    BuySell = "Sell"
+                };
+
+                _dbContext.UserStock.Add(stockSale);
+
+                // Update the user's balance with the received amount
+                user.Balance += totalAmountReceived;
+
+                _dbContext.SaveChanges();
+
+                return Ok("Stock sell successful!");
+            }
+            else
+            {
+                // Insufficient quantity to sell
+                return BadRequest("Insufficient quantity of stocks to sell.");
+            }
+        }
         [HttpPost("transfer")]
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public async Task<IActionResult> Transfer(TransferRequest request)
@@ -536,19 +535,142 @@ public IActionResult SellStock([FromBody] SellStockRequest sellRequest)
             return user != null ? user.Name : string.Empty;
         }
 
+         [HttpGet("transactionhistory")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> TransactionHistory()
+        {
+            // Retrieve the currently authenticated user's ID from the JWT token
+            var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+            var user = _dbContext.Users.SingleOrDefault(u => u.Email == userEmail);
+            int userId;
+            if (user == null)
+            {
+                return NotFound("User not found");
+            }
+            else
+            {
+                userId = user.UserId;
+            }
+
+                var userTransaction = _dbContext.Transactions
+                .Where(t => t.UserId == userId)
+                .Select(t => new
+                {
+                    t.Id,
+                    t.Type,
+                    t.Amount,
+                    t.Time
+                })
+                .ToList();
+
+            var transactionDTO = userTransaction.Select(transaction => new
+            {
+                Id = transaction.Id,
+                Amount = transaction.Amount,
+                Date = transaction.Time,
+                Type = transaction.Type
+            });
+
+            return Ok(transactionDTO);
+        }
+[HttpGet("calculate-profits-losses")]
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+public async Task<IActionResult> CalculateProfitsAndLossesAsync()
+{
+    var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+
+    if (string.IsNullOrEmpty(userEmail))
+    {
+        return Unauthorized("User email not found in the token.");
+    }
+
+    var user = _dbContext.Users.SingleOrDefault(u => u.Email == userEmail);
+
+    if (user == null)
+    {
+        return NotFound("User not found");
+    }
+
+    var userStocks = _dbContext.UserStock
+        .Where(us => us.UserId == user.UserId)
+        .OrderBy(us => us.PurchaseDate)
+        .ToList();
+
+    var stockProfitsAndLosses = new Dictionary<string, StockProfitLoss>(); 
+
+    foreach (var stock in userStocks)
+    {
+        if (!stockProfitsAndLosses.ContainsKey(stock.StockSymbol))
+        {
+            stockProfitsAndLosses[stock.StockSymbol] = new StockProfitLoss
+            {
+                StockSymbol = stock.StockSymbol,
+                ProfitLoss = 0.0f, 
+                CurrentQuantity = 0, 
+                TotalInvestment = 0.0f 
+            };
+        }
+
+        var currentStock = stockProfitsAndLosses[stock.StockSymbol];
+
+        if (stock.BuySell == "Buy")
+        {
+            float purchaseCost = stock.PurchasePrice;
+            currentStock.ProfitLoss -= purchaseCost;
+            //currentStock.TotalInvestment += purchaseCost; // Track total investment
+            currentStock.CurrentQuantity += stock.Quantity;
+            
+        }
+        else if (stock.BuySell == "Sell")
+        {
+            float saleValue = stock.PurchasePrice;
+            currentStock.ProfitLoss += saleValue;
+            currentStock.CurrentQuantity -= stock.Quantity;
+            //currentStock.TotalInvestment += saleValue;
+        }
+    }
+
+    foreach (var stock in stockProfitsAndLosses.Values)
+    {
+        var closePriceTask = FetchLatestClosePriceAsync(stock.StockSymbol);
+        
+        var closePrice = await closePriceTask;        
+
+        stock.ProfitLoss += (float)(closePrice ?? 0) * stock.CurrentQuantity;
+    }
+
+    return Ok(stockProfitsAndLosses.Values.ToList());
+}
+
+        private async Task<double?> FetchLatestClosePriceAsync(string symbol)
+        {
+
+                using (var client = new HttpClient())
+                {
+                    var response = await client.GetAsync($"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?metrics=close?&interval=1d&range=5y");
+                    Console.WriteLine(response);
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var content = await response.Content.ReadAsStringAsync();
+                        Console.WriteLine("Received Stock JSON data");
+
+                        var stockData = JsonConvert.DeserializeObject<YahooFinanceResponse>(content);
+
+                        List<double?> current_price_list = stockData.Chart.Result[0].Indicators.Quote[0].Close;
+                        double? current_price = current_price_list[current_price_list.Count - 1];
 
 
-
-
-
-
-
-
-
-
-
-
-
+                        return current_price;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Failed to fetch stock data. Status code: " + response.StatusCode);
+                        Console.Out.Flush(); 
+                    }
+                }
+            return 0.0f;
+        }
 
 
     }

@@ -24,7 +24,8 @@ namespace BankingApp.Models
         public int Quantity { get; set; } 
         public DateTime PurchaseDate { get; set; }  
 
-        public int PurchasePrice { get; set; }
+
+        public float PurchasePrice { get; set; } 
 
         public string BuySell {get; set;}
     }
@@ -40,6 +41,16 @@ namespace BankingApp.Models
         public int Quantity { get; set; }
         public float SellPrice { get; set; }
     }
+        public class StockProfitLoss
+    {
+        public string StockSymbol { get; set; }
+        public float ProfitLoss { get; set; }
+
+        public int CurrentQuantity {get; set;}
+
+        public float TotalInvestment {get; set;}
+    }
+
 
 
 

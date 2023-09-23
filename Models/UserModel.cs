@@ -122,6 +122,27 @@ namespace BankingApp.Models
             public float Amount { get; set; }
             public DateTime Date {get; set;}
         }
+        public class Loan
+        {
+            public int LoanId { get; set; }
+            public int UserId { get; set; }
+            public float Amount { get; set; }
+            public float InterestRate { get; set; }
+            public int TermMonths { get; set; }
+            public DateTime ApplicationDate { get; set; }
+            public int Approved { get; set; }
+            public DateTime ApprovalDate { get; set; }
+        }
+
+        public class LoanRequest
+        {
+            public float Amount {get; set;}
+            public float InterestRate {get; set;}
+            public int TermMonths {get; set;}
+
+
+        }
+
 
 
 }

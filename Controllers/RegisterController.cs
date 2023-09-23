@@ -573,74 +573,74 @@ namespace BankingApp.Controllers
 
             return Ok(transactionDTO);
         }
-[HttpGet("calculate-profits-losses")]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-public async Task<IActionResult> CalculateProfitsAndLossesAsync()
-{
-    var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
-
-    if (string.IsNullOrEmpty(userEmail))
-    {
-        return Unauthorized("User email not found in the token.");
-    }
-
-    var user = _dbContext.Users.SingleOrDefault(u => u.Email == userEmail);
-
-    if (user == null)
-    {
-        return NotFound("User not found");
-    }
-
-    var userStocks = _dbContext.UserStock
-        .Where(us => us.UserId == user.UserId)
-        .OrderBy(us => us.PurchaseDate)
-        .ToList();
-
-    var stockProfitsAndLosses = new Dictionary<string, StockProfitLoss>(); 
-
-    foreach (var stock in userStocks)
-    {
-        if (!stockProfitsAndLosses.ContainsKey(stock.StockSymbol))
+        [HttpGet("calculate-profits-losses")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> CalculateProfitsAndLossesAsync()
         {
-            stockProfitsAndLosses[stock.StockSymbol] = new StockProfitLoss
+            var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+
+            if (string.IsNullOrEmpty(userEmail))
             {
-                StockSymbol = stock.StockSymbol,
-                ProfitLoss = 0.0f, 
-                CurrentQuantity = 0, 
-                TotalInvestment = 0.0f 
-            };
+                return Unauthorized("User email not found in the token.");
+            }
+
+            var user = _dbContext.Users.SingleOrDefault(u => u.Email == userEmail);
+
+            if (user == null)
+            {
+                return NotFound("User not found");
+            }
+
+            var userStocks = _dbContext.UserStock
+                .Where(us => us.UserId == user.UserId)
+                .OrderBy(us => us.PurchaseDate)
+                .ToList();
+
+            var stockProfitsAndLosses = new Dictionary<string, StockProfitLoss>(); 
+
+            foreach (var stock in userStocks)
+            {
+                if (!stockProfitsAndLosses.ContainsKey(stock.StockSymbol))
+                {
+                    stockProfitsAndLosses[stock.StockSymbol] = new StockProfitLoss
+                    {
+                        StockSymbol = stock.StockSymbol,
+                        ProfitLoss = 0.0f, 
+                        CurrentQuantity = 0, 
+                        TotalInvestment = 0.0f 
+                    };
+                }
+
+                var currentStock = stockProfitsAndLosses[stock.StockSymbol];
+
+                if (stock.BuySell == "Buy")
+                {
+                    float purchaseCost = stock.PurchasePrice;
+                    currentStock.ProfitLoss -= purchaseCost;
+                    //currentStock.TotalInvestment += purchaseCost; // Track total investment
+                    currentStock.CurrentQuantity += stock.Quantity;
+                    
+                }
+                else if (stock.BuySell == "Sell")
+                {
+                    float saleValue = stock.PurchasePrice;
+                    currentStock.ProfitLoss += saleValue;
+                    currentStock.CurrentQuantity -= stock.Quantity;
+                    //currentStock.TotalInvestment += saleValue;
+                }
+            }
+
+            foreach (var stock in stockProfitsAndLosses.Values)
+            {
+                var closePriceTask = FetchLatestClosePriceAsync(stock.StockSymbol);
+                
+                var closePrice = await closePriceTask;        
+
+                stock.ProfitLoss += (float)(closePrice ?? 0) * stock.CurrentQuantity;
+            }
+
+            return Ok(stockProfitsAndLosses.Values.ToList());
         }
-
-        var currentStock = stockProfitsAndLosses[stock.StockSymbol];
-
-        if (stock.BuySell == "Buy")
-        {
-            float purchaseCost = stock.PurchasePrice;
-            currentStock.ProfitLoss -= purchaseCost;
-            //currentStock.TotalInvestment += purchaseCost; // Track total investment
-            currentStock.CurrentQuantity += stock.Quantity;
-            
-        }
-        else if (stock.BuySell == "Sell")
-        {
-            float saleValue = stock.PurchasePrice;
-            currentStock.ProfitLoss += saleValue;
-            currentStock.CurrentQuantity -= stock.Quantity;
-            //currentStock.TotalInvestment += saleValue;
-        }
-    }
-
-    foreach (var stock in stockProfitsAndLosses.Values)
-    {
-        var closePriceTask = FetchLatestClosePriceAsync(stock.StockSymbol);
-        
-        var closePrice = await closePriceTask;        
-
-        stock.ProfitLoss += (float)(closePrice ?? 0) * stock.CurrentQuantity;
-    }
-
-    return Ok(stockProfitsAndLosses.Values.ToList());
-}
 
         private async Task<double?> FetchLatestClosePriceAsync(string symbol)
         {
@@ -671,6 +671,81 @@ public async Task<IActionResult> CalculateProfitsAndLossesAsync()
                 }
             return 0.0f;
         }
+        [HttpPost("apply-loan")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public IActionResult ApplyLoan([FromBody] LoanRequest loanApplication)
+        {
+            var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+
+            if (string.IsNullOrEmpty(userEmail))
+            {
+                return Unauthorized("User email not found in the token.");
+            }
+
+            var user = _dbContext.Users.SingleOrDefault(u => u.Email == userEmail);
+
+            if (user == null)
+            {
+                return NotFound("User not found");
+            }
+            var loan = new Loan
+            {
+                UserId = user.UserId,
+                Amount = loanApplication.Amount,
+                InterestRate = loanApplication.InterestRate,
+                TermMonths = loanApplication.TermMonths,
+                ApplicationDate = DateTime.UtcNow,
+                Approved = 1, 
+                ApprovalDate = DateTime.MinValue 
+            };
+
+            _dbContext.Loans.Add(loan);
+            _dbContext.SaveChanges();
+
+            return Ok("Loan application submitted successfully!");
+        }
+
+        [HttpGet("user-loans")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public IActionResult GetUserLoans()
+        {
+            var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+
+            if (string.IsNullOrEmpty(userEmail))
+            {
+                return Unauthorized("User email not found in the token.");
+            }
+
+            var user = _dbContext.Users.SingleOrDefault(u => u.Email == userEmail);
+
+            if (user == null)
+            {
+                return NotFound("User not found");
+            }
+
+            // Retrieve user's loans
+            var userLoans = _dbContext.Loans
+                .Where(loan => loan.UserId == user.UserId)
+                .Select(loan => new
+                {
+                    loan.LoanId,
+                    loan.Amount,
+                    loan.InterestRate,
+                    loan.TermMonths,
+                    loan.ApplicationDate,
+                    loan.Approved,
+                    loan.ApprovalDate
+                })
+                .ToList();
+            foreach(var item in userLoans)
+            {
+                Console.WriteLine(item);
+            }
+
+            return Ok(userLoans);
+        }
+
+
 
 
     }

@@ -15,6 +15,9 @@ namespace BankingApp.Data
 
         public DbSet<BankingApp.Models.Transfer> Transfer { get; set; }
 
+        public DbSet<BankingApp.Models.Loan> Loans { get; set; }
+
+
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

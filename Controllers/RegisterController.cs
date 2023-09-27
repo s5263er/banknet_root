@@ -183,12 +183,19 @@ namespace BankingApp.Controllers
                 return BadRequest("Email and password are required.");
             }
 
+
             if (AuthenticateUser(model.Email, model.Password))
             {
                 var token = GenerateJwtToken(model.Email);
-                return Ok(new { token });
-            }
+                var user = _dbContext.Users.SingleOrDefault(u => u.Email == model.Email);
+                Console.WriteLine("model email: "+ model.Email);
+                Console.WriteLine("user email: "+ user.Email);
 
+
+                var role = user.Role;
+                Console.WriteLine("user role:" + role);
+                return Ok(new { token, role });
+            }
 
             return Unauthorized("Invalid credentials");
         }
@@ -744,6 +751,58 @@ namespace BankingApp.Controllers
 
             return Ok(userLoans);
         }
+         [HttpGet("pending-loans")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public IActionResult GetPendingLoans()
+        {
+            // Fetch and return a list of pending loan applications from your database
+            Console.WriteLine("girdik");
+            var pendingLoans = _dbContext.Loans.Where(loan => loan.Approved == 1).ToList();
+            return Ok(pendingLoans);
+        }
+
+        // Implement this method to approve a loan application
+        [HttpPost("approve-loan/{loanId}")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public IActionResult ApproveLoan(int loanId)
+        {
+            // Find the loan by loanId in your database and update its approval status
+            var loan = _dbContext.Loans.SingleOrDefault(l => l.LoanId == loanId);
+
+            if (loan == null)
+            {
+                return NotFound("Loan not found");
+            }
+
+            loan.Approved = 2; // You can use a different status code if needed
+            loan.ApprovalDate = DateTime.UtcNow;
+
+            _dbContext.SaveChanges();
+
+            return Ok("Loan approved successfully!");
+        }
+
+        // Implement this method to reject a loan application
+        [HttpPost("reject-loan/{loanId}")]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public IActionResult RejectLoan(int loanId)
+        {
+            // Find the loan by loanId in your database and update its approval status
+            var loan = _dbContext.Loans.SingleOrDefault(l => l.LoanId == loanId);
+
+            if (loan == null)
+            {
+                return NotFound("Loan not found");
+            }
+
+            loan.Approved = 3; // You can use a different status code if needed
+            loan.ApprovalDate = DateTime.UtcNow;
+
+            _dbContext.SaveChanges();
+
+            return Ok("Loan rejected successfully!");
+        }
+    
 
 
 
